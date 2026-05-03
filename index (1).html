@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>RESELLER OKTSHOP17</title>
+<style>
+body{font-family:Arial,sans-serif;background:#111;color:#fff;margin:0;padding:20px} .wrap{max-width:430px;margin:auto}.card{background:#1f1f1f;padding:16px;border-radius:18px;margin-bottom:14px}.hidden{display:none}input,select,button{width:100%;padding:12px;margin-top:10px;border-radius:12px;border:none}button{background:#e60000;color:#fff;font-weight:700}.gold{color:#ffd700}.points{font-size:30px;color:#00ff66;text-align:center;font-weight:700}
+</style>
+</head>
+<body>
+<div class='wrap'>
+<div class='card'><h1 class='gold'>RESELLER OKTSHOP17</h1><p>Aplikasi Member & Admin</p></div>
+<div class='card' id='login'>
+<select id='role'><option value='member'>Member</option><option value='admin'>Admin</option></select>
+<input id='name' placeholder='Nama'>
+<input id='pass' type='password' placeholder='Password'>
+<button onclick='login()'>Masuk</button>
+</div>
+<div class='card hidden' id='member'>
+<h3>Menu Member</h3><p>Halo <span id='mname'></span></p>
+<input id='amt' type='number' placeholder='Total Belanja'>
+<button onclick='calc()'>Hitung Poin</button>
+<div class='points' id='pts'>0 Poin</div>
+<button>Riwayat Belanja</button><button>Tukar Poin</button><button>QR Member</button><button onclick='logout()'>Logout</button>
+</div>
+<div class='card hidden' id='admin'>
+<h3>Admin Panel</h3>
+<button>Tambah Member</button><button>Input Transaksi</button><button>Data Member</button><button>Broadcast Promo</button><button onclick='logout()'>Logout</button>
+</div>
+<div class='card'><small>Tempel Firebase config di bagian script bawah.</small></div>
+</div>
+<script>
+function login(){let r=role.value,n=name.value,p=pass.value;if(!n||!p){alert('Isi login');return;}login.style.display='none';if(r==='member'){member.classList.remove('hidden');mname.innerText=n;}else{admin.classList.remove('hidden');}}
+function calc(){let v=parseInt(amt.value||0);pts.innerText=Math.floor(v/1000)+' Poin';}
+function logout(){location.reload();}
+</script>
+<!-- Firebase CDN + Config Anda di sini -->
+</body>
+</html>
