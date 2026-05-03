@@ -1,40 +1,214 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>RESELLER OKTSHOP17</title>
-<style>
-body{font-family:Arial,sans-serif;background:#111;color:#fff;margin:0;padding:20px} .wrap{max-width:430px;margin:auto}.card{background:#1f1f1f;padding:16px;border-radius:18px;margin-bottom:14px}.hidden{display:none}input,select,button{width:100%;padding:12px;margin-top:10px;border-radius:12px;border:none}button{background:#e60000;color:#fff;font-weight:700}.gold{color:#ffd700}.points{font-size:30px;color:#00ff66;text-align:center;font-weight:700}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>OKTSHOP17 - Firebase Edition</title>
+    <style>
+        body{font-family:'Segoe UI',Arial,sans-serif;background:#111;color:#fff;margin:0;padding:20px}
+        .wrap{max-width:500px;margin:auto}
+        .card{background:#1f1f1f;padding:20px;border-radius:18px;margin-bottom:14px;box-shadow:0 4px 15px rgba(0,0,0,0.5)}
+        .hidden{display:none}
+        input,select,button{width:100%;padding:12px;margin-top:10px;border-radius:10px;border:1px solid #333;background:#2a2a2a;color:#fff;box-sizing:border-box}
+        button{background:#e60000;color:#fff;font-weight:700;cursor:pointer;border:none;transition:0.3s}
+        button:hover{background:#ff1a1a}
+        .gold{color:#ffd700;text-align:center}
+        .item-list{margin-top:15px;border-top:1px solid #333;padding-top:10px}
+        .product-card{background:#2a2a2a;padding:10px;margin-bottom:8px;border-radius:8px;display:flex;justify-content:space-between;align-items:center}
+        .stock-low{color:#ff4444;font-weight:bold}
+        .price{color:#00ff66;font-weight:bold}
+    </style>
 </head>
 <body>
+
 <div class='wrap'>
-<div class='card'><h1 class='gold'>RESELLER OKTSHOP17</h1><p>Aplikasi Member & Admin</p></div>
-<div class='card' id='login'>
-<select id='role'><option value='member'>Member</option><option value='admin'>Admin</option></select>
-<input id='name' placeholder='Nama'>
-<input id='pass' type='password' placeholder='Password'>
-<button onclick='login()'>Masuk</button>
+    <div class='card'><h1 class='gold'>OKTSHOP17</h1><p style="text-align:center">Reseller & Admin System</p></div>
+
+    <!-- UI LOGIN -->
+    <div class='card' id='ui-login'>
+        <input id='email' type="email" placeholder='Email (admin@okt.com)'>
+        <input id='pass' type='password' placeholder='Password'>
+        <button id="btnLogin">Masuk</button>
+        <p id="loginStatus" style="font-size:12px; color:gray; text-align:center"></p>
+    </div>
+
+    <!-- UI RESELLER -->
+    <div class='card hidden' id='ui-reseller'>
+        <h3>Halo, <span id='resellerName'>...</span></h3>
+        <p>Saldo Poin: <b class="gold" id="resellerPoints">0</b></p>
+        <div class="item-list" id="productListReseller">
+            <!-- Produk akan muncul di sini -->
+        </div>
+        <button onclick='location.reload()'>Logout</button>
+    </div>
+
+    <!-- UI ADMIN -->
+    <div class='card hidden' id='ui-admin'>
+        <h3>Panel Admin</h3>
+        <p>Kelola Harga & Stok Barang</p>
+        
+        <div style="background:#2a2a2a; padding:10px; border-radius:10px; margin-bottom:10px">
+            <small>Tambah/Update Produk:</small>
+            <input id="pName" placeholder="Nama Barang">
+            <input id="pPrice" type="number" placeholder="Harga (Rp)">
+            <input id="pStock" type="number" placeholder="Jumlah Stok">
+            <button id="btnSaveProduct" style="background:#007bff">Simpan Barang</button>
+        </div>
+
+        <div class="item-list" id="productListAdmin">
+            <!-- List barang untuk admin -->
+        </div>
+        <button onclick='location.reload()'>Logout</button>
+    </div>
 </div>
-<div class='card hidden' id='member'>
-<h3>Menu Member</h3><p>Halo <span id='mname'></span></p>
-<input id='amt' type='number' placeholder='Total Belanja'>
-<button onclick='calc()'>Hitung Poin</button>
-<div class='points' id='pts'>0 Poin</div>
-<button>Riwayat Belanja</button><button>Tukar Poin</button><button>QR Member</button><button onclick='logout()'>Logout</button>
-</div>
-<div class='card hidden' id='admin'>
-<h3>Admin Panel</h3>
-<button>Tambah Member</button><button>Input Transaksi</button><button>Data Member</button><button>Broadcast Promo</button><button onclick='logout()'>Logout</button>
-</div>
-<div class='card'><small>Tempel Firebase config di bagian script bawah.</small></div>
-</div>
-<script>
-function login(){let r=role.value,n=name.value,p=pass.value;if(!n||!p){alert('Isi login');return;}login.style.display='none';if(r==='member'){member.classList.remove('hidden');mname.innerText=n;}else{admin.classList.remove('hidden');}}
-function calc(){let v=parseInt(amt.value||0);pts.innerText=Math.floor(v/1000)+' Poin';}
-function logout(){location.reload();}
+
+<script type="module">
+    // IMPORT FIREBASE SDK
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // === KONFIGURASI FIREBASE ANDA ===
+    const firebaseConfig = {
+        apiKey: "AIzaSy...",
+        authDomain: "project-id.firebaseapp.com",
+        projectId: "project-id",
+        storageBucket: "project-id.appspot.com",
+        messagingSenderId: "...",
+        appId: "..."
+    };
+
+    // Inisialisasi
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // DOM Elements
+    const loginUI = document.getElementById('ui-login');
+    const adminUI = document.getElementById('ui-admin');
+    const resellerUI = document.getElementById('ui-reseller');
+
+    // --- FUNGSI LOGIN ---
+    document.getElementById('btnLogin').onclick = async () => {
+        const email = document.getElementById('email').value;
+        const pass = document.getElementById('pass').value;
+        const status = document.getElementById('loginStatus');
+
+        try {
+            status.innerText = "Mengecek akun...";
+            const userCred = await signInWithEmailAndPassword(auth, email, pass);
+            checkRole(userCred.user.uid);
+        } catch (e) {
+            status.innerText = "Gagal login: " + e.message;
+        }
+    };
+
+    // --- CEK ROLE (Admin/Reseller) ---
+    async function checkRole(uid) {
+        const userDoc = await getDoc(doc(db, "users", uid));
+        if (userDoc.exists()) {
+            const data = userDoc.data();
+            loginUI.classList.add('hidden');
+            if (data.role === 'admin') {
+                adminUI.classList.remove('hidden');
+                loadAdminPanel();
+            } else {
+                resellerUI.classList.remove('hidden');
+                document.getElementById('resellerName').innerText = data.name;
+                document.getElementById('resellerPoints').innerText = data.points || 0;
+                loadResellerPanel();
+            }
+        } else {
+            alert("Data user tidak ditemukan di Firestore!");
+        }
+    }
+
+    // --- FITUR ADMIN: KELOLA BARANG ---
+    document.getElementById('btnSaveProduct').onclick = async () => {
+        const name = document.getElementById('pName').value;
+        const price = parseInt(document.getElementById('pPrice').value);
+        const stock = parseInt(document.getElementById('pStock').value);
+
+        if(!name || !price) return alert("Isi data barang!");
+
+        await setDoc(doc(db, "products", name), {
+            name: name,
+            price: price,
+            stock: stock
+        }, { merge: true });
+        
+        alert("Barang berhasil disimpan!");
+    };
+
+    function loadAdminPanel() {
+        onSnapshot(collection(db, "products"), (snap) => {
+            const list = document.getElementById('productListAdmin');
+            list.innerHTML = "";
+            snap.forEach(docSnap => {
+                const p = docSnap.data();
+                list.innerHTML += `
+                    <div class="product-card">
+                        <div>
+                            <b>${p.name}</b><br>
+                            <small class="price">Rp ${p.price.toLocaleString()}</small> | Stok: ${p.stock}
+                        </div>
+                        <button style="width:70px; font-size:10px" onclick="editStock('${p.name}')">Edit</button>
+                    </div>
+                `;
+            });
+        });
+    }
+
+    // --- FITUR RESELLER: BELI ---
+    function loadResellerPanel() {
+        onSnapshot(collection(db, "products"), (snap) => {
+            const list = document.getElementById('productListReseller');
+            list.innerHTML = "";
+            snap.forEach(docSnap => {
+                const p = docSnap.data();
+                list.innerHTML += `
+                    <div class="product-card">
+                        <div>
+                            <b>${p.name}</b><br>
+                            <span class="price">Rp ${p.price.toLocaleString()}</span><br>
+                            <small class="${p.stock < 5 ? 'stock-low' : ''}">Stok: ${p.stock}</small>
+                        </div>
+                        <button style="width:80px" ${p.stock <= 0 ? 'disabled' : ''} 
+                                onclick="buyProduct('${p.name}', ${p.price})">
+                            ${p.stock <= 0 ? 'Habis' : 'Beli'}
+                        </button>
+                    </div>
+                `;
+            });
+        });
+    }
+
+    // Fungsi Pembelian
+    window.buyProduct = async (name, price) => {
+        if (!confirm(`Beli ${name}? Stok akan berkurang.`)) return;
+        
+        const pRef = doc(db, "products", name);
+        const pSnap = await getDoc(pRef);
+        
+        if (pSnap.data().stock > 0) {
+            await updateDoc(pRef, { stock: increment(-1) });
+            // Tambah poin reseller (misal 1% dari harga)
+            const uRef = doc(db, "users", auth.currentUser.uid);
+            await updateDoc(uRef, { points: increment(Math.floor(price/100)) });
+            alert("Berhasil membeli! Stok berkurang dan poin bertambah.");
+        }
+    };
+
+    window.editStock = (name) => {
+        const newStock = prompt("Masukkan jumlah stok baru untuk " + name);
+        const newPrice = prompt("Masukkan harga baru (kosongkan jika tidak ganti)");
+        if (newStock !== null) {
+            const data = { stock: parseInt(newStock) };
+            if (newPrice) data.price = parseInt(newPrice);
+            updateDoc(doc(db, "products", name), data);
+        }
+    };
+
 </script>
-<!-- Firebase CDN + Config Anda di sini -->
 </body>
 </html>
