@@ -17,6 +17,7 @@
         .product-card{background:#2a2a2a;padding:10px;margin-bottom:8px;border-radius:8px;display:flex;justify-content:space-between;align-items:center}
         .stock-low{color:#ff4444;font-weight:bold}
         .price{color:#00ff66;font-weight:bold}
+        .loading { text-align: center; color: #ffd700; }
     </style>
 </head>
 <body>
@@ -24,29 +25,29 @@
 <div class='wrap'>
     <div class='card'><h1 class='gold'>OKTSHOP17</h1><p style="text-align:center">Reseller & Admin System</p></div>
 
+    <!-- LOADING SPINNER -->
+    <div id="loading" class="loading hidden">Memuat data...</div>
+
     <!-- UI LOGIN -->
     <div class='card' id='ui-login'>
+        <h3>Login</h3>
         <input id='email' type="email" placeholder='Email (admin@okt.com)'>
         <input id='pass' type='password' placeholder='Password'>
         <button id="btnLogin">Masuk</button>
-        <p id="loginStatus" style="font-size:12px; color:gray; text-align:center"></p>
+        <p id="loginStatus" style="font-size:12px; color:gray; text-align:center; margin-top:10px"></p>
     </div>
 
     <!-- UI RESELLER -->
     <div class='card hidden' id='ui-reseller'>
         <h3>Halo, <span id='resellerName'>...</span></h3>
         <p>Saldo Poin: <b class="gold" id="resellerPoints">0</b></p>
-        <div class="item-list" id="productListReseller">
-            <!-- Produk akan muncul di sini -->
-        </div>
-        <button onclick='location.reload()'>Logout</button>
+        <div class="item-list" id="productListReseller"></div>
+        <button id="btnLogoutReseller">Logout</button>
     </div>
 
     <!-- UI ADMIN -->
     <div class='card hidden' id='ui-admin'>
         <h3>Panel Admin</h3>
-        <p>Kelola Harga & Stok Barang</p>
-        
         <div style="background:#2a2a2a; padding:10px; border-radius:10px; margin-bottom:10px">
             <small>Tambah/Update Produk:</small>
             <input id="pName" placeholder="Nama Barang">
@@ -54,23 +55,17 @@
             <input id="pStock" type="number" placeholder="Jumlah Stok">
             <button id="btnSaveProduct" style="background:#007bff">Simpan Barang</button>
         </div>
-
-        <div class="item-list" id="productListAdmin">
-            <!-- List barang untuk admin -->
-        </div>
-        <button onclick='location.reload()'>Logout</button>
+        <div class="item-list" id="productListAdmin"></div>
+        <button id="btnLogoutAdmin">Logout</button>
     </div>
 </div>
 
 <script type="module">
-    // IMPORT FIREBASE SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // === KONFIGURASI FIREBASE ANDA ===
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyBIQ0tuOUM015lyS3-IuzioR6YBIZwBoB0",
   authDomain: "reseller-oktshop17.firebaseapp.com",
@@ -81,15 +76,51 @@ const firebaseConfig = {
   appId: "1:9176826607:web:be8bcddd729bb43f31511a",
   measurementId: "G-WC9BY9GQZE"
 };
-    // Inisialisasi
+    
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // DOM Elements
     const loginUI = document.getElementById('ui-login');
     const adminUI = document.getElementById('ui-admin');
     const resellerUI = document.getElementById('ui-reseller');
+    const loading = document.getElementById('loading');
+
+    // --- CEK STATUS LOGIN (AUTO-LOGIN) ---
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            checkRole(user.uid);
+        } else {
+            showUI('login');
+        }
+    });
+
+    async function checkRole(uid) {
+        showLoading(true);
+        try {
+            const userDoc = await getDoc(doc(db, "users", uid));
+            if (userDoc.exists()) {
+                const data = userDoc.data();
+                if (data.role === 'admin') {
+                    showUI('admin');
+                    loadAdminPanel();
+                } else {
+                    showUI('reseller');
+                    document.getElementById('resellerName').innerText = data.name || "User";
+                    document.getElementById('resellerPoints').innerText = data.points || 0;
+                    loadResellerPanel();
+                }
+            } else {
+                // JIKA USER AUTH ADA TAPI DI FIRESTORE BELUM ADA
+                alert("Akun terdaftar tapi data profil tidak ditemukan di Firestore. Hubungi IT.");
+                await signOut(auth);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Terjadi kesalahan saat mengambil data user.");
+        }
+        showLoading(false);
+    }
 
     // --- FUNGSI LOGIN ---
     document.getElementById('btnLogin').onclick = async () => {
@@ -97,50 +128,47 @@ const firebaseConfig = {
         const pass = document.getElementById('pass').value;
         const status = document.getElementById('loginStatus');
 
+        if(!email || !pass) return alert("Isi email dan password!");
+
         try {
-            status.innerText = "Mengecek akun...";
-            const userCred = await signInWithEmailAndPassword(auth, email, pass);
-            checkRole(userCred.user.uid);
+            status.innerText = "Menghubungkan...";
+            await signInWithEmailAndPassword(auth, email, pass);
         } catch (e) {
-            status.innerText = "Gagal login: " + e.message;
+            status.innerText = "Error: " + e.code;
+            console.error(e);
+            if(e.code === 'auth/user-not-found') alert("Email tidak terdaftar!");
+            else if(e.code === 'auth/wrong-password') alert("Password salah!");
+            else alert("Gagal masuk: " + e.message);
         }
     };
 
-    // --- CEK ROLE (Admin/Reseller) ---
-    async function checkRole(uid) {
-        const userDoc = await getDoc(doc(db, "users", uid));
-        if (userDoc.exists()) {
-            const data = userDoc.data();
-            loginUI.classList.add('hidden');
-            if (data.role === 'admin') {
-                adminUI.classList.remove('hidden');
-                loadAdminPanel();
-            } else {
-                resellerUI.classList.remove('hidden');
-                document.getElementById('resellerName').innerText = data.name;
-                document.getElementById('resellerPoints').innerText = data.points || 0;
-                loadResellerPanel();
-            }
-        } else {
-            alert("Data user tidak ditemukan di Firestore!");
-        }
+    // --- LOGOUT ---
+    const logoutAction = () => signOut(auth).then(() => location.reload());
+    document.getElementById('btnLogoutReseller').onclick = logoutAction;
+    document.getElementById('btnLogoutAdmin').onclick = logoutAction;
+
+    // --- TAMPILAN HELPER ---
+    function showUI(mode) {
+        loginUI.classList.add('hidden');
+        adminUI.classList.add('hidden');
+        resellerUI.classList.add('hidden');
+        if(mode === 'login') loginUI.classList.remove('hidden');
+        if(mode === 'admin') adminUI.classList.remove('hidden');
+        if(mode === 'reseller') resellerUI.classList.remove('hidden');
     }
 
-    // --- FITUR ADMIN: KELOLA BARANG ---
+    function showLoading(show) {
+        loading.classList.toggle('hidden', !show);
+    }
+
+    // --- ADMIN LOGIC ---
     document.getElementById('btnSaveProduct').onclick = async () => {
         const name = document.getElementById('pName').value;
         const price = parseInt(document.getElementById('pPrice').value);
         const stock = parseInt(document.getElementById('pStock').value);
-
-        if(!name || !price) return alert("Isi data barang!");
-
-        await setDoc(doc(db, "products", name), {
-            name: name,
-            price: price,
-            stock: stock
-        }, { merge: true });
-        
-        alert("Barang berhasil disimpan!");
+        if(!name || isNaN(price)) return alert("Isi data dengan benar!");
+        await setDoc(doc(db, "products", name), { name, price, stock }, { merge: true });
+        alert("Berhasil!");
     };
 
     function loadAdminPanel() {
@@ -149,69 +177,51 @@ const firebaseConfig = {
             list.innerHTML = "";
             snap.forEach(docSnap => {
                 const p = docSnap.data();
-                list.innerHTML += `
-                    <div class="product-card">
-                        <div>
-                            <b>${p.name}</b><br>
-                            <small class="price">Rp ${p.price.toLocaleString()}</small> | Stok: ${p.stock}
-                        </div>
-                        <button style="width:70px; font-size:10px" onclick="editStock('${p.name}')">Edit</button>
-                    </div>
-                `;
+                list.innerHTML += `<div class="product-card">
+                    <div><b>${p.name}</b><br><small>Rp${p.price.toLocaleString()} | Stok: ${p.stock}</small></div>
+                    <button style="width:70px" onclick="editStock('${p.name}')">Edit</button>
+                </div>`;
             });
         });
     }
 
-    // --- FITUR RESELLER: BELI ---
+    // --- RESELLER LOGIC ---
     function loadResellerPanel() {
         onSnapshot(collection(db, "products"), (snap) => {
             const list = document.getElementById('productListReseller');
             list.innerHTML = "";
             snap.forEach(docSnap => {
                 const p = docSnap.data();
-                list.innerHTML += `
-                    <div class="product-card">
-                        <div>
-                            <b>${p.name}</b><br>
-                            <span class="price">Rp ${p.price.toLocaleString()}</span><br>
-                            <small class="${p.stock < 5 ? 'stock-low' : ''}">Stok: ${p.stock}</small>
-                        </div>
-                        <button style="width:80px" ${p.stock <= 0 ? 'disabled' : ''} 
-                                onclick="buyProduct('${p.name}', ${p.price})">
-                            ${p.stock <= 0 ? 'Habis' : 'Beli'}
-                        </button>
-                    </div>
-                `;
+                list.innerHTML += `<div class="product-card">
+                    <div><b>${p.name}</b><br><span class="price">Rp ${p.price.toLocaleString()}</span><br>
+                    <small class="${p.stock < 5 ? 'stock-low' : ''}">Stok: ${p.stock}</small></div>
+                    <button style="width:80px" ${p.stock <= 0 ? 'disabled' : ''} onclick="buyProduct('${p.name}', ${p.price})">
+                    ${p.stock <= 0 ? 'Habis' : 'Beli'}</button>
+                </div>`;
             });
         });
     }
 
-    // Fungsi Pembelian
     window.buyProduct = async (name, price) => {
-        if (!confirm(`Beli ${name}? Stok akan berkurang.`)) return;
-        
+        if (!confirm(`Beli ${name}?`)) return;
         const pRef = doc(db, "products", name);
-        const pSnap = await getDoc(pRef);
-        
-        if (pSnap.data().stock > 0) {
+        const uRef = doc(db, "users", auth.currentUser.uid);
+        try {
             await updateDoc(pRef, { stock: increment(-1) });
-            // Tambah poin reseller (misal 1% dari harga)
-            const uRef = doc(db, "users", auth.currentUser.uid);
             await updateDoc(uRef, { points: increment(Math.floor(price/100)) });
-            alert("Berhasil membeli! Stok berkurang dan poin bertambah.");
-        }
+            alert("Berhasil!");
+        } catch(e) { alert("Gagal: " + e.message); }
     };
 
     window.editStock = (name) => {
-        const newStock = prompt("Masukkan jumlah stok baru untuk " + name);
-        const newPrice = prompt("Masukkan harga baru (kosongkan jika tidak ganti)");
-        if (newStock !== null) {
-            const data = { stock: parseInt(newStock) };
-            if (newPrice) data.price = parseInt(newPrice);
-            updateDoc(doc(db, "products", name), data);
+        const nS = prompt("Stok baru:");
+        const nP = prompt("Harga baru (kosongkan jika tidak):");
+        if (nS !== null) {
+            const d = { stock: parseInt(nS) };
+            if (nP) d.price = parseInt(nP);
+            updateDoc(doc(db, "products", name), d);
         }
     };
-
 </script>
 </body>
 </html>
