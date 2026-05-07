@@ -141,7 +141,7 @@ button {
 }
 .tab.active { background: var(--primary); color: white; }
 
-.hidden { display: none; }
+.hidden { display: none !important; }
 .text-gold { color: var(--gold); }
 .fade-in { animation: fadeIn 0.5s ease-in; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
