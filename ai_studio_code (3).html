@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>OKTSHOP17 - Premium System</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+<div class="container">
+    <!-- Header -->
+    <header class="main-header">
+        <h1 class="logo">OKT<span>SHOP17</span></h1>
+        <div id="user-info-top" class="hidden">
+            <span id="userNameDisp">...</span>
+            <div class="points-badge">
+                <i class="fas fa-coins text-gold"></i> <span id="userPoints">0</span>
+            </div>
+        </div>
+    </header>
+
+    <div id="loading" class="hidden">
+        <div class="spinner"></div>
+        <p>Memproses data...</p>
+    </div>
+
+    <!-- UI LOGIN -->
+    <div id="ui-login" class="card fade-in">
+        <div class="card-header">
+            <h2>Welcome Back</h2>
+            <p>Silakan login untuk melanjutkan</p>
+        </div>
+        <div class="input-group">
+            <i class="fas fa-envelope"></i>
+            <input id="email" type="email" placeholder="Email Address">
+        </div>
+        <div class="input-group">
+            <i class="fas fa-lock"></i>
+            <input id="pass" type="password" placeholder="Password">
+        </div>
+        <button id="btnLogin" class="btn-primary">LOGIN</button>
+    </div>
+
+    <!-- UI MAIN -->
+    <div id="ui-main" class="hidden">
+        
+        <!-- HALAMAN BERANDA -->
+        <div id="page-home" class="main-page">
+            <div class="section-title">Katalog Produk</div>
+            <div class="catalog-grid" id="catalog-list"></div>
+            <button id="btnMore" class="btn-outline">Lihat Produk Lainnya</button>
+        </div>
+
+        <!-- HALAMAN TUKAR POIN (Reseller) -->
+        <div id="page-points" class="main-page hidden">
+            <div class="section-title">Tukar Poin Anda</div>
+            <div class="points-grid">
+                <!-- Points Card 25k - 1M -->
+                <script>
+                    const denominations = [25000, 50000, 100000, 150000, 200000, 300000, 400000, 500000, 1000000];
+                    denominations.forEach(amt => {
+                        document.write(`
+                            <div class="point-card" onclick="requestExchange(${amt})">
+                                <i class="fas fa-gift"></i>
+                                <h3>${amt.toLocaleString()}</h3>
+                                <p>Poin</p>
+                                <button class="btn-sm">Tukar Sekarang</button>
+                            </div>
+                        `);
+                    });
+                </script>
+            </div>
+        </div>
+
+        <!-- HALAMAN KERANJANG -->
+        <div id="page-cart" class="main-page hidden">
+            <div class="tabs">
+                <div class="tab active" onclick="switchCartTab('tab-pesanan')">Belum Bayar</div>
+                <div class="tab" onclick="switchCartTab('tab-status')">Riwayat</div>
+            </div>
+            <div id="tab-pesanan" class="list-container"></div>
+            <div id="tab-status" class="list-container hidden"></div>
+        </div>
+
+        <!-- HALAMAN PROFIL (ADMIN & RESELLER) -->
+        <div id="page-profile" class="main-page hidden">
+            <!-- Tampilan Khusus Admin -->
+            <div id="profile-admin" class="hidden">
+                <div class="stats-grid">
+                    <div class="stat-box">Users: <b id="count-users">0</b></div>
+                    <div class="stat-box">Orders: <b id="count-orders">0</b></div>
+                </div>
+                
+                <div class="tabs admin-tabs">
+                    <div class="tab active" onclick="switchAdminTab('adm-order')">Order</div>
+                    <div class="tab" onclick="switchAdminTab('adm-redeem')">Tukar Poin</div>
+                    <div class="tab" onclick="switchAdminTab('adm-katalog')">Barang</div>
+                </div>
+                
+                <div id="adm-order" class="adm-content">
+                    <div id="admin-order-list"></div>
+                </div>
+
+                <div id="adm-redeem" class="adm-content hidden">
+                    <h3>Permintaan Tukar Poin</h3>
+                    <div id="admin-redeem-list"></div>
+                </div>
+
+                <div id="adm-katalog" class="adm-content hidden">
+                    <div class="card bg-dark">
+                        <input id="pName" placeholder="Nama Produk">
+                        <input id="pPrice" type="number" placeholder="Harga">
+                        <input id="pStock" type="number" placeholder="Stok">
+                        <button id="btnSaveProduct" class="btn-primary">Tambah Produk</button>
+                    </div>
+                    <div id="admin-prod-list"></div>
+                </div>
+            </div>
+
+            <!-- Tampilan Khusus Reseller -->
+            <div id="profile-reseller" class="hidden">
+                <div class="card">
+                    <h3>Update Profil</h3>
+                    <input id="prof-nama" placeholder="Nama Lengkap">
+                    <input id="prof-hp" placeholder="WhatsApp (08xxx)">
+                    <textarea id="prof-alamat" placeholder="Alamat Pengiriman"></textarea>
+                    <button id="btnUpdateProfile" class="btn-primary">Simpan Perubahan</button>
+                </div>
+            </div>
+
+            <button onclick="logout()" class="btn-danger"><i class="fas fa-sign-out-alt"></i> Logout Akun</button>
+        </div>
+
+        <!-- Navigasi Bawah -->
+        <nav class="nav-bottom">
+            <div class="nav-item active" id="nav-home" onclick="showPage('page-home')"><i class="fas fa-home"></i><span>Beranda</span></div>
+            <div class="nav-item" id="nav-points" onclick="showPage('page-points')"><i class="fas fa-coins"></i><span>Tukar Poin</span></div>
+            <div class="nav-item" id="nav-cart" onclick="showPage('page-cart')"><i class="fas fa-shopping-cart"></i><span>Pesanan</span></div>
+            <div class="nav-item" id="nav-profile" onclick="showPage('page-profile')"><i class="fas fa-user-gear"></i><span>Akun</span></div>
+        </nav>
+    </div>
+
+    <!-- Modal Pay -->
+    <div id="modal-pay" class="modal hidden">
+        <div class="modal-content">
+            <h3>Konfirmasi Pembayaran</h3>
+            <p id="pay-order-id"></p>
+            <div id="bank-info" class="bank-card"></div>
+            <button id="btnSubmitPay" class="btn-primary">SAYA SUDAH TRANSFER</button>
+            <button onclick="closePay()" class="btn-outline">Tutup</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
