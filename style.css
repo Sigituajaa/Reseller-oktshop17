@@ -1,3 +1,4 @@
+/* --- VARIABLES & BASE --- */
 :root {
     --primary: #ff4757;
     --secondary: #2f3542;
@@ -11,25 +12,44 @@
     --gradient: linear-gradient(135deg, #ff4757, #ff6b81);
 }
 
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
 body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', -apple-system, sans-serif;
     background: var(--bg-dark);
     color: var(--text-white);
     margin: 0;
-    padding-bottom: 90px;
+    padding-bottom: 100px; /* Jarak untuk nav bawah */
+    line-height: 1.5;
 }
 
-.container { max-width: 500px; margin: auto; padding: 15px; }
+.container {
+    max-width: 500px;
+    margin: auto;
+    padding: 15px;
+}
 
-/* Header */
+/* --- HEADER --- */
 .main-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 20px 5px;
 }
-.logo { font-size: 24px; font-weight: 800; letter-spacing: -1px; }
-.logo span { color: var(--primary); }
+
+.logo {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin: 0;
+}
+
+.logo span {
+    color: var(--primary);
+}
 
 .points-badge {
     background: rgba(255, 165, 2, 0.15);
@@ -38,15 +58,35 @@ body {
     border: 1px solid var(--accent);
     color: var(--accent);
     font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-/* Cards & Inputs */
+/* --- CARDS & FORMS --- */
 .card {
     background: var(--card-bg);
     padding: 20px;
     border-radius: 24px;
     margin-bottom: 20px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.input-group {
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.input-group i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-gray);
+}
+
+.input-group input {
+    padding-left: 45px !important;
 }
 
 input, textarea {
@@ -57,11 +97,16 @@ input, textarea {
     border: 1px solid #333;
     background: #15181f;
     color: white;
-    box-sizing: border-box;
     font-size: 14px;
+    outline: none;
+    transition: 0.3s;
 }
 
-/* Buttons */
+input:focus {
+    border-color: var(--primary);
+}
+
+/* --- BUTTONS --- */
 button {
     width: 100%;
     padding: 15px;
@@ -71,35 +116,40 @@ button {
     cursor: pointer;
     transition: 0.3s;
     margin-top: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
+
+button:active {
+    transform: scale(0.98);
+}
+
 .btn-primary { background: var(--gradient); color: white; }
 .btn-outline { background: transparent; border: 1px solid #444; color: white; }
 .btn-danger { background: rgba(255, 71, 87, 0.1); color: var(--primary); border: 1px solid var(--primary); }
 .btn-sm { padding: 8px; font-size: 12px; }
 
-/* Catalog Grid */
-.catalog-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.prod-card {
+/* --- GRIDS (CATALOG & POINTS) --- */
+.catalog-grid, .points-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 15px;
+}
+
+.prod-card, .point-card {
     background: var(--card-bg);
     padding: 15px;
     border-radius: 20px;
     text-align: center;
+    border: 1px solid #2a2d35;
 }
+
 .prod-price { color: var(--success); font-weight: bold; display: block; margin: 8px 0; }
+.text-gold { color: var(--gold); }
 
-/* Point Exchange Cards */
-.points-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.point-card {
-    background: linear-gradient(145deg, #1e2129, #15181f);
-    padding: 20px;
-    border-radius: 20px;
-    text-align: center;
-    border: 1px solid #333;
-}
-.point-card i { font-size: 24px; color: var(--accent); margin-bottom: 10px; }
-.point-card h3 { margin: 5px 0; color: var(--gold); }
-
-/* Navigation Bottom */
+/* --- NAVIGATION BOTTOM --- */
 .nav-bottom {
     position: fixed;
     bottom: 0; left: 0; right: 0;
@@ -111,11 +161,19 @@ button {
     border-top: 1px solid #333;
     z-index: 1000;
 }
-.nav-item { text-align: center; color: var(--text-gray); font-size: 10px; transition: 0.3s; }
+
+.nav-item {
+    text-align: center;
+    color: var(--text-gray);
+    font-size: 10px;
+    text-decoration: none;
+    cursor: pointer;
+}
+
 .nav-item i { font-size: 20px; display: block; margin-bottom: 4px; }
 .nav-item.active { color: var(--primary); }
 
-/* Order Cards */
+/* --- ORDER & TABS --- */
 .order-card {
     background: var(--card-bg);
     padding: 15px;
@@ -123,6 +181,7 @@ button {
     margin-bottom: 12px;
     border-left: 5px solid var(--primary);
 }
+
 .status-badge {
     background: rgba(46, 213, 115, 0.2);
     color: var(--success);
@@ -132,7 +191,6 @@ button {
     font-weight: bold;
 }
 
-/* Tabs */
 .tabs { display: flex; gap: 10px; margin-bottom: 15px; }
 .tab {
     flex: 1; text-align: center; padding: 12px;
@@ -141,18 +199,36 @@ button {
 }
 .tab.active { background: var(--primary); color: white; }
 
-.hidden { display: none !important; }
-.text-gold { color: var(--gold); }
+/* --- ANIMATION --- */
 .fade-in { animation: fadeIn 0.5s ease-in; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-/* Modals */
-.modal {
-    position: fixed; top:0; left:0; right:0; bottom:0;
-    background: rgba(0,0,0,0.8); z-index: 2000;
-    display: flex; align-items: center; justify-content: center;
+@keyframes fadeIn { 
+    from { opacity: 0; transform: translateY(10px); } 
+    to { opacity: 1; transform: translateY(0); } 
 }
+
+/* --- MODAL SYSTEM (FIXED) --- */
+.modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 9999;
+    display: flex; /* Menggunakan flex untuk centering */
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
 .modal-content {
-    background: var(--card-bg); width: 85%; padding: 25px;
-    border-radius: 25px; text-align: center;
+    background: var(--card-bg);
+    width: 100%;
+    max-width: 400px;
+    padding: 25px;
+    border-radius: 25px;
+    text-align: center;
+    position: relative;
+}
+
+/* --- UTILITY (THE MOST IMPORTANT) --- */
+.hidden {
+    display: none !important; /* Memaksa elemen untuk hilang jika class ini ada */
 }
