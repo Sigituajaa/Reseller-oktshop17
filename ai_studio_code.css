@@ -1,0 +1,158 @@
+:root {
+    --primary: #ff4757;
+    --secondary: #2f3542;
+    --accent: #ffa502;
+    --success: #2ed573;
+    --bg-dark: #0f1116;
+    --card-bg: #1e2129;
+    --text-white: #ffffff;
+    --text-gray: #a4b0be;
+    --gold: #ffd700;
+    --gradient: linear-gradient(135deg, #ff4757, #ff6b81);
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-white);
+    margin: 0;
+    padding-bottom: 90px;
+}
+
+.container { max-width: 500px; margin: auto; padding: 15px; }
+
+/* Header */
+.main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 5px;
+}
+.logo { font-size: 24px; font-weight: 800; letter-spacing: -1px; }
+.logo span { color: var(--primary); }
+
+.points-badge {
+    background: rgba(255, 165, 2, 0.15);
+    padding: 8px 15px;
+    border-radius: 20px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-weight: bold;
+}
+
+/* Cards & Inputs */
+.card {
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+input, textarea {
+    width: 100%;
+    padding: 15px;
+    margin-top: 10px;
+    border-radius: 15px;
+    border: 1px solid #333;
+    background: #15181f;
+    color: white;
+    box-sizing: border-box;
+    font-size: 14px;
+}
+
+/* Buttons */
+button {
+    width: 100%;
+    padding: 15px;
+    border-radius: 15px;
+    border: none;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.3s;
+    margin-top: 10px;
+}
+.btn-primary { background: var(--gradient); color: white; }
+.btn-outline { background: transparent; border: 1px solid #444; color: white; }
+.btn-danger { background: rgba(255, 71, 87, 0.1); color: var(--primary); border: 1px solid var(--primary); }
+.btn-sm { padding: 8px; font-size: 12px; }
+
+/* Catalog Grid */
+.catalog-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.prod-card {
+    background: var(--card-bg);
+    padding: 15px;
+    border-radius: 20px;
+    text-align: center;
+}
+.prod-price { color: var(--success); font-weight: bold; display: block; margin: 8px 0; }
+
+/* Point Exchange Cards */
+.points-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.point-card {
+    background: linear-gradient(145deg, #1e2129, #15181f);
+    padding: 20px;
+    border-radius: 20px;
+    text-align: center;
+    border: 1px solid #333;
+}
+.point-card i { font-size: 24px; color: var(--accent); margin-bottom: 10px; }
+.point-card h3 { margin: 5px 0; color: var(--gold); }
+
+/* Navigation Bottom */
+.nav-bottom {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(30, 33, 41, 0.95);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: space-around;
+    padding: 12px;
+    border-top: 1px solid #333;
+    z-index: 1000;
+}
+.nav-item { text-align: center; color: var(--text-gray); font-size: 10px; transition: 0.3s; }
+.nav-item i { font-size: 20px; display: block; margin-bottom: 4px; }
+.nav-item.active { color: var(--primary); }
+
+/* Order Cards */
+.order-card {
+    background: var(--card-bg);
+    padding: 15px;
+    border-radius: 18px;
+    margin-bottom: 12px;
+    border-left: 5px solid var(--primary);
+}
+.status-badge {
+    background: rgba(46, 213, 115, 0.2);
+    color: var(--success);
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+/* Tabs */
+.tabs { display: flex; gap: 10px; margin-bottom: 15px; }
+.tab {
+    flex: 1; text-align: center; padding: 12px;
+    background: #1e2129; border-radius: 12px;
+    cursor: pointer; font-size: 12px; font-weight: 600;
+}
+.tab.active { background: var(--primary); color: white; }
+
+.hidden { display: none; }
+.text-gold { color: var(--gold); }
+.fade-in { animation: fadeIn 0.5s ease-in; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Modals */
+.modal {
+    position: fixed; top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.8); z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+}
+.modal-content {
+    background: var(--card-bg); width: 85%; padding: 25px;
+    border-radius: 25px; text-align: center;
+}
