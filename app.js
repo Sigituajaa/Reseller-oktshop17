@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, updateDoc, increment, query, orderBy, limit, serverTimestamp, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, updateDoc, increment, query, orderBy, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBIQ0tuOUM015lyS3-IuzioR6YBIZwBoB0",
@@ -16,25 +16,17 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 let userData = {};
+const ADMIN_WA = "6281234567890"; // GANTI DENGAN NOMOR WA ADMIN (Awali 62)
 
-// --- AUTH CHECK ---
+// --- AUTH ---
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
             userData = userDoc.data();
-            updateUIProfile();
-            if (userData.role === 'admin') {
-                document.getElementById('profile-admin').classList.remove('hidden');
-                loadAdminData();
-            } else {
-                document.getElementById('profile-reseller').classList.remove('hidden');
-            }
-            showUI('main');
-            loadKatalog();
-            loadUserOrders();
+            initApp();
         } else {
-            await setDoc(doc(db, "users", user.uid), { name: user.email.split('@')[0], role: 'reseller', points: 0 });
+            await setDoc(doc(db, "users", user.uid), { name: "User", role: 'reseller', points: 0 });
             location.reload();
         }
     } else {
@@ -42,31 +34,139 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-function updateUIProfile() {
-    document.getElementById('userNameDisp').innerText = userData.name;
-    document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
-    document.getElementById('prof-nama').value = userData.name || "";
-    document.getElementById('prof-hp').value = userData.phone || "";
-    document.getElementById('prof-alamat').value = userData.address || "";
+function initApp() {
+    showUI('main');
     document.getElementById('user-info-top').classList.remove('hidden');
+    document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
+    
+    if (userData.role === 'admin') {
+        document.getElementById('admin-section').classList.remove('hidden');
+        loadAdmin();
+    }
+    
+    loadProducts();
+    loadUserOrders();
+    loadPointRewards();
 }
 
-// --- CORE ACTIONS ---
+// --- CATALOG ---
+function loadProducts() {
+    onSnapshot(collection(db, "products"), (snap) => {
+        const list = document.getElementById('catalog-list');
+        list.innerHTML = "";
+        snap.forEach(d => {
+            const p = d.data();
+            list.innerHTML += `
+            <div class="card" style="text-align:center">
+                <b>${p.name}</b><br>
+                <small style="color:var(--primary)">Rp ${p.price.toLocaleString()}</small>
+                <button onclick="checkout('${p.name}', ${p.price})" class="btn-main" style="padding:5px; margin-top:10px">BELI</button>
+            </div>`;
+        });
+    });
+}
+
+window.checkout = async (name, price) => {
+    const orderID = "OKT" + Date.now().toString().slice(-6);
+    await setDoc(doc(db, "orders", orderID), {
+        orderID, userID: auth.currentUser.uid, userName: userData.name, 
+        itemName: name, total: price, status: 'Menunggu Bayar', createdAt: serverTimestamp()
+    });
+    openPay(orderID, name, price);
+};
+
+// --- WHATSAPP LOGIC ---
+window.openPay = (oid, name, price) => {
+    document.getElementById('pay-info').innerText = `Pesanan: ${name} (Rp ${price.toLocaleString()})\nOrder ID: ${oid}`;
+    document.getElementById('modal-pay').classList.remove('hidden');
+    
+    document.getElementById('btnConfirmWA').onclick = () => {
+        const text = `Halo Admin, saya mau konfirmasi pembayaran.\n\n` +
+                     `Nama: ${userData.name}\n` +
+                     `Order ID: ${oid}\n` +
+                     `Produk: ${name}\n\n` +
+                     `*(Mohon lampirkan foto bukti transfer setelah pesan ini)*`;
+        window.open(`https://wa.me/${ADMIN_WA}?text=${encodeURIComponent(text)}`, '_blank');
+    };
+};
+
+window.closeModal = () => document.getElementById('modal-pay').classList.add('hidden');
+
+// --- TABS & NAVIGATION ---
+window.showPage = (pageId, el) => {
+    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+    document.getElementById(pageId).classList.remove('hidden');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+};
+
+window.switchTab = (type) => {
+    if(type === 'unpaid') {
+        document.getElementById('list-unpaid').classList.remove('hidden');
+        document.getElementById('list-history').classList.add('hidden');
+    } else {
+        document.getElementById('list-unpaid').classList.add('hidden');
+        document.getElementById('list-history').classList.remove('hidden');
+    }
+    event.target.parentNode.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+};
+
+// --- CORE FUNCTIONS ---
+function loadUserOrders() {
+    onSnapshot(query(collection(db, "orders"), orderBy("createdAt", "desc")), (snap) => {
+        const unpaid = document.getElementById('list-unpaid');
+        const history = document.getElementById('list-history');
+        unpaid.innerHTML = history.innerHTML = "";
+        snap.forEach(d => {
+            const o = d.data();
+            if(o.userID !== auth.currentUser.uid) return;
+            const html = `
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between">
+                        <b>#${o.orderID}</b>
+                        <span style="color:var(--primary)">${o.status}</span>
+                    </div>
+                    <p>${o.itemName} - Rp ${o.total.toLocaleString()}</p>
+                    ${o.status === 'Menunggu Bayar' ? `<button onclick="openPay('${o.orderID}','${o.itemName}',${o.total})" class="btn-wa" style="padding:5px">Konfirmasi Ulang</button>` : ''}
+                </div>`;
+            if(o.status === 'Menunggu Bayar') unpaid.innerHTML += html;
+            else history.innerHTML += html;
+        });
+    });
+}
+
+function loadPointRewards() {
+    const list = document.getElementById('points-list');
+    const prizes = [25000, 50000, 100000, 200000];
+    list.innerHTML = "";
+    prizes.forEach(amt => {
+        list.innerHTML += `
+        <div class="card" style="text-align:center">
+            <h3>${amt.toLocaleString()}</h3>
+            <p>Poin</p>
+            <button onclick="redeem(${amt})" class="btn-main" style="background:orange">TUKAR</button>
+        </div>`;
+    });
+}
+
+window.redeem = async (amt) => {
+    if(userData.points < amt) return alert("Poin tidak cukup");
+    if(confirm("Tukar poin?")){
+        await updateDoc(doc(db, "users", auth.currentUser.uid), { points: increment(-amt) });
+        await addDoc(collection(db, "redeems"), { userID: auth.currentUser.uid, userName: userData.name, amount: amt, status: 'Pending', createdAt: serverTimestamp() });
+        alert("Permintaan terkirim!");
+    }
+};
+
+// --- LOGIN & UTILS ---
 document.getElementById('btnLogin').onclick = async () => {
     const e = document.getElementById('email').value;
     const p = document.getElementById('pass').value;
-    try { await signInWithEmailAndPassword(auth, e, p); } catch(err) { alert("Login Gagal: Email/Password salah"); }
+    try { await signInWithEmailAndPassword(auth, e, p); } catch(err) { alert("Login Gagal"); }
 };
 
 window.logout = () => signOut(auth).then(() => location.reload());
-
-window.showPage = (pageId) => {
-    document.querySelectorAll('.main-page').forEach(p => p.classList.add('hidden'));
-    document.getElementById(pageId).classList.remove('hidden');
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    const navId = pageId.replace('page-', 'nav-');
-    if(document.getElementById(navId)) document.getElementById(navId).classList.add('active');
-};
 
 function showUI(id) {
     document.getElementById('ui-login').classList.add('hidden');
@@ -74,194 +174,30 @@ function showUI(id) {
     document.getElementById('ui-' + id).classList.remove('hidden');
 }
 
-// --- CATALOG ---
-function loadKatalog() {
-    onSnapshot(collection(db, "products"), (snap) => {
-        const list = document.getElementById('catalog-list');
-        list.innerHTML = "";
-        snap.forEach(d => {
-            const p = d.data();
-            list.innerHTML += `
-            <div class="prod-card fade-in">
-                <b>${p.name}</b>
-                <span class="prod-price">Rp ${p.price.toLocaleString()}</span>
-                <button onclick="checkout('${p.name}', ${p.price})" class="btn-primary btn-sm">BELI</button>
-            </div>`;
-        });
-    });
-}
-
-window.checkout = async (name, price) => {
-    const orderID = "OKT" + Math.floor(10000 + Math.random() * 90000);
-    await setDoc(doc(db, "orders", orderID), {
-        orderID, userID: auth.currentUser.uid, itemName: name, total: price, status: 'Menunggu Bayar', createdAt: serverTimestamp()
-    });
-    alert("Berhasil! Silakan cek menu Pesanan untuk membayar.");
-    showPage('page-cart');
-};
-
-// --- POINTS SYSTEM ---
-window.requestExchange = async (amount) => {
-    if (userData.points < amount) return alert("Poin tidak cukup!");
-    
-    if (confirm(`Tukar ${amount.toLocaleString()} poin sekarang?`)) {
-        try {
-            // Potong poin langsung di user
-            await updateDoc(doc(db, "users", auth.currentUser.uid), {
-                points: increment(-amount)
-            });
-
-            // Buat request ke admin
-            await addDoc(collection(db, "redeems"), {
-                userID: auth.currentUser.uid,
-                userName: userData.name,
-                amount: amount,
-                status: 'Pending',
-                createdAt: serverTimestamp()
-            });
-
-            alert("Permintaan tukar poin berhasil dikirim!");
-            location.reload();
-        } catch (e) { alert("Terjadi kesalahan."); }
-    }
-};
-
-// --- ADMIN LOGIC ---
-function loadAdminData() {
-    // Load Orders
+// --- ADMIN ---
+function loadAdmin() {
     onSnapshot(query(collection(db, "orders"), orderBy("createdAt", "desc")), (snap) => {
-        const list = document.getElementById('admin-order-list');
+        const list = document.getElementById('adm-orders');
         list.innerHTML = "";
         snap.forEach(d => {
             const o = d.data();
-            list.innerHTML += `
-            <div class="order-card">
-                <b>#${o.orderID}</b> - ${o.userName || 'Customer'}<br>
-                Item: ${o.itemName} <br>
-                <div class="status-badge">${o.status}</div>
-                <div style="display:flex; gap:5px; margin-top:10px">
-                    <button onclick="updateStatus('${d.id}', 'Diproses')" class="btn-primary btn-sm">Proses</button>
-                    <button onclick="updateStatus('${d.id}', 'Selesai', '${o.userID}', ${o.total})" class="btn-primary btn-sm" style="background:var(--success)">Selesai</button>
-                </div>
-            </div>`;
-        });
-    });
-
-    // Load Redeem Requests
-    onSnapshot(query(collection(db, "redeems"), orderBy("createdAt", "desc")), (snap) => {
-        const list = document.getElementById('admin-redeem-list');
-        list.innerHTML = "";
-        snap.forEach(d => {
-            const r = d.data();
-            if(r.status !== 'Pending') return;
-            list.innerHTML += `
-            <div class="card" style="border-left:5px solid var(--gold)">
-                <b>${r.userName}</b> meminta tukar:<br>
-                <h2 class="text-gold">${r.amount.toLocaleString()} Poin</h2>
-                <div style="display:flex; gap:10px">
-                    <button onclick="handleRedeem('${d.id}', 'Selesai')" class="btn-primary btn-sm" style="background:var(--success)">KONFIRMASI TUKAR</button>
-                    <button onclick="handleRedeem('${d.id}', 'Dibatalkan', '${r.userID}', ${r.amount})" class="btn-danger btn-sm">BATAL (REFUND POIN)</button>
-                </div>
+            list.innerHTML += `<div class="card">
+                <b>${o.userName}</b> - #${o.orderID}<br>${o.itemName}
+                <button onclick="updateStatus('${d.id}', 'Selesai', '${o.userID}', ${o.total})" class="btn-main" style="background:green; margin-top:5px">Selesaikan</button>
             </div>`;
         });
     });
 }
-
-window.handleRedeem = async (docId, status, uid, amount) => {
-    await updateDoc(doc(db, "redeems", docId), { status: status });
-    if (status === 'Dibatalkan') {
-        await updateDoc(doc(db, "users", uid), { points: increment(amount) });
-        alert("Penukaran dibatalkan, poin telah dikembalikan ke reseller.");
-    } else {
-        alert("Penukaran dikonfirmasi!");
-    }
-};
 
 window.updateStatus = async (id, stat, uid, total) => {
     await updateDoc(doc(db, "orders", id), { status: stat });
-    if(stat === 'Selesai' && uid) {
-        // Bonus poin 1% dari total belanja
-        const bonus = Math.floor(total * 0.01);
-        await updateDoc(doc(db, "users", uid), { points: increment(bonus) });
-    }
-    alert("Status diperbarui!");
-};
-
-// --- RESELLER ORDERS ---
-function loadUserOrders() {
-    onSnapshot(query(collection(db, "orders"), orderBy("createdAt", "desc")), (snap) => {
-        const unpaid = document.getElementById('res-unpaid-list') || document.getElementById('tab-pesanan');
-        const history = document.getElementById('res-status-list') || document.getElementById('tab-status');
-        unpaid.innerHTML = history.innerHTML = "";
-        
-        snap.forEach(d => {
-            const o = d.data();
-            if(o.userID !== auth.currentUser.uid) return;
-            const html = `
-            <div class="order-card fade-in">
-                <div style="display:flex; justify-content:space-between">
-                    <b>#${o.orderID}</b>
-                    <span class="status-badge">${o.status}</span>
-                </div>
-                <div style="margin:10px 0">${o.itemName}</div>
-                ${o.status === 'Menunggu Bayar' ? `<button onclick="openPay('${d.id}', '${o.orderID}')" class="btn-primary btn-sm">BAYAR SEKARANG</button>` : ''}
-            </div>`;
-            if(o.status === 'Menunggu Bayar') unpaid.innerHTML += html;
-            else history.innerHTML += html;
-        });
-    });
-}
-
-// --- UTILS ---
-window.switchCartTab = (id) => {
-    document.getElementById('tab-pesanan').classList.add('hidden');
-    document.getElementById('tab-status').classList.add('hidden');
-    document.getElementById(id).classList.remove('hidden');
-    event.target.parentNode.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    event.target.classList.add('active');
-};
-
-window.switchAdminTab = (id) => {
-    document.querySelectorAll('.adm-content').forEach(c => c.classList.add('hidden'));
-    document.getElementById(id).classList.remove('hidden');
-    event.target.parentNode.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    event.target.classList.add('active');
-};
-
-let activePayID = "";
-window.openPay = (id, oid) => { 
-    activePayID = id; 
-    document.getElementById('pay-order-id').innerText = "Order ID: " + oid;
-    document.getElementById('modal-pay').classList.remove('hidden');
-};
-window.closePay = () => document.getElementById('modal-pay').classList.add('hidden');
-
-document.getElementById('btnSubmitPay').onclick = async () => {
-    await updateDoc(doc(db, "orders", activePayID), { 
-        status: 'Sudah Bayar',
-        userName: userData.name,
-        userPhone: userData.phone,
-        userAddress: userData.address
-    });
-    alert("Konfirmasi terkirim! Admin akan memproses pesanan Anda.");
-    closePay();
-};
-
-document.getElementById('btnUpdateProfile').onclick = async () => {
-    const n = document.getElementById('prof-nama').value;
-    const h = document.getElementById('prof-hp').value;
-    const a = document.getElementById('prof-alamat').value;
-    await updateDoc(doc(db, "users", auth.currentUser.uid), { name: n, phone: h, address: a });
-    alert("Profil berhasil diperbarui!");
+    if(stat === 'Selesai') await updateDoc(doc(db, "users", uid), { points: increment(total * 0.01) });
+    alert("Berhasil!");
 };
 
 document.getElementById('btnSaveProduct').onclick = async () => {
     const n = document.getElementById('pName').value;
     const p = parseInt(document.getElementById('pPrice').value);
-    const s = parseInt(document.getElementById('pStock').value);
-    if(!n || !p) return alert("Isi data produk!");
-    await setDoc(doc(db, "products", n), { name: n, price: p, stock: s });
-    alert("Produk berhasil ditambahkan!");
-    document.getElementById('pName').value = "";
-    document.getElementById('pPrice').value = "";
+    await setDoc(doc(db, "products", n), { name: n, price: p });
+    alert("Produk ditambahkan");
 };
